@@ -4,6 +4,8 @@ class Engine {
     val Graphics = SimpleGraphics()
     val Input = Input()
     val Audio = AudioEngine()
+    private var isRunning = false
+    private var lastUpdateTime = System.nanoTime()
     internal val gameObjectManager = GameObjectManager()
 
     // Инициализация
@@ -33,6 +35,23 @@ class Engine {
     // Очистка ресурсов
     fun cleanup() {
         Audio.cleanup()
+    }
+
+    fun GameLoop(updateCallback: (Double) -> Unit) {
+        isRunning = true
+        while (isRunning) {
+            val currentTime = System.nanoTime()
+            val deltaTime = (currentTime - lastUpdateTime) / 1_000_000_000.0
+            lastUpdateTime = currentTime
+            Input.update()
+            updateCallback(deltaTime)
+            update()
+            try {
+                Thread.sleep(2) // Короткая пауза вместо 16ms
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+            }
+        }
     }
 
 }
