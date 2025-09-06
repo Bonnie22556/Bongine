@@ -1,22 +1,17 @@
 package org.bon26.engine
 
-// *********************************
-//
-// СДЕЛАНО С ПОМОЩЬЮ ИСКУСТВЕННОГО ИНТЕЛЕКТА
-//
-// *********************************
-
 import java.awt.event.*
 import javax.swing.JComponent
 
 class Input {
     // Текущие состояния
     private val keysPressed = BooleanArray(256)
-    private val mouseButtons = BooleanArray(3) // 0=left, 1=middle, 2=right
+    private val mouseButtons = BooleanArray(5)
+    // 0 = left, 1 = middle, 2 = right, 3 = back, 4 = forward
 
     // Предыдущие состояния (для определения изменений)
     private val prevKeysPressed = BooleanArray(256)
-    private val prevMouseButtons = BooleanArray(3)
+    private val prevMouseButtons = BooleanArray(5)
 
     // Позиция мыши
     var mouseX = 0
@@ -25,22 +20,24 @@ class Input {
     fun setupInput(component: JComponent) {
         // Обработка мыши
         component.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent) {}
-
             override fun mousePressed(e: MouseEvent) {
-                when (e.button) {
-                    MouseEvent.BUTTON1 -> mouseButtons[0] = true
-                    MouseEvent.BUTTON2 -> mouseButtons[1] = true
-                    MouseEvent.BUTTON3 -> mouseButtons[2] = true
-                }
+                    when (e.button) {
+                        1 -> mouseButtons[0] = true // Левая кнопка
+                        2 -> mouseButtons[1] = true // Средняя кнопка (колесо)
+                        3 -> mouseButtons[2] = true // Правая кнопка
+                        4 -> mouseButtons[3] = true // Кнопка назад
+                        5 -> mouseButtons[4] = true // Кнопка вперед
+                    }
             }
 
             override fun mouseReleased(e: MouseEvent) {
-                when (e.button) {
-                    MouseEvent.BUTTON1 -> mouseButtons[0] = false
-                    MouseEvent.BUTTON2 -> mouseButtons[1] = false
-                    MouseEvent.BUTTON3 -> mouseButtons[2] = false
-                }
+                    when (e.button) {
+                        1 -> mouseButtons[0] = false
+                        2 -> mouseButtons[1] = false
+                        3 -> mouseButtons[2] = false
+                        4 -> mouseButtons[3] = false
+                        5 -> mouseButtons[4] = false
+                    }
             }
         })
 
@@ -80,8 +77,8 @@ class Input {
     // Обновление состояний (вызывать в начале каждого кадра)
     fun update() {
         // Сохраняем текущие состояния как предыдущие
-        System.arraycopy(keysPressed, 0, prevKeysPressed, 0, keysPressed.size)
-        System.arraycopy(mouseButtons, 0, prevMouseButtons, 0, mouseButtons.size)
+            System.arraycopy(keysPressed, 0, prevKeysPressed, 0, keysPressed.size)
+            System.arraycopy(mouseButtons, 0, prevMouseButtons, 0, mouseButtons.size)
     }
 
     // Функции для проверки состояния ввода
@@ -98,14 +95,14 @@ class Input {
     }
 
     fun isMouseButtonPressed(button: Int): Boolean {
-        return button in 0..2 && mouseButtons[button]
+        return button in mouseButtons.indices && mouseButtons[button]
     }
 
     fun isMouseButtonJustPressed(button: Int): Boolean {
-        return button in 0..2 && mouseButtons[button] && !prevMouseButtons[button]
+            return button in mouseButtons.indices && mouseButtons[button] && !prevMouseButtons[button]
     }
 
     fun isMouseButtonJustReleased(button: Int): Boolean {
-        return button in 0..2 && !mouseButtons[button] && prevMouseButtons[button]
+            return button in mouseButtons.indices && !mouseButtons[button] && prevMouseButtons[button]
     }
 }

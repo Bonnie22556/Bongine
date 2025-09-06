@@ -1,11 +1,5 @@
 package org.bon26.engine
 
-// *********************************
-//
-// СДЕЛАНО С ПОМОЩЬЮ ИСКУСТВЕННОГО ИНТЕЛЕКТА
-//
-// *********************************
-
 import java.awt.*
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
@@ -77,18 +71,6 @@ class SimpleGraphics {
         return canvas?.drawRect(x, y, width, height, color, isFilled) ?: -1
     }
 
-    // Создание Bitmap (объекта для работы с изображением)
-    fun createBitmap(imagePath: String, filter: ImageFilter = ImageFilter.NONE): Bitmap {
-        return canvas?.createBitmap(imagePath, filter) ?: throw IllegalStateException("Canvas not initialized")
-    }
-
-    // Отрисовка Bitmap
-    fun drawBitmap(bitmap: Bitmap, x: Int, y: Int,
-                   scaleX: Double = 1.0, scaleY: Double = 1.0,
-                   rotation: Double = 0.0): Int {
-        return canvas?.drawBitmap(bitmap, x, y, scaleX, scaleY, rotation) ?: -1
-    }
-
     // Добавление анимации
     fun addAnimation(animation: Animation): Int {
         return canvas?.addAnimation(animation) ?: -1
@@ -158,7 +140,7 @@ class SimpleGraphics {
 
 // Типы элементов
 enum class ElementType {
-    TEXT, IMAGE, BITMAP, ANIMATION, RECT
+    TEXT, IMAGE, ANIMATION, RECT
 }
 
 // Информация об элементе
@@ -209,44 +191,11 @@ class Animation(val frames: List<String>, var frameDelay: Int = 100) {
     }
 }
 
-// Класс для работы с изображениями как с Bitmap
-class Bitmap(val image: BufferedImage, val filter: SimpleGraphics.ImageFilter) {
-    val width: Int
-        get() = image.width
-
-    val height: Int
-        get() = image.height
-
-    fun scale(scaleX: Double, scaleY: Double): Bitmap {
-        val newWidth = (image.width * scaleX).toInt()
-        val newHeight = (image.height * scaleY).toInt()
-        val scaledImage = BufferedImage(newWidth, newHeight, image.type)
-        val g = scaledImage.createGraphics()
-
-        when (filter) {
-            SimpleGraphics.ImageFilter.NONE -> {
-                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR)
-                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
-            }
-            SimpleGraphics.ImageFilter.ANTIALIASING -> {
-                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
-                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            }
-        }
-
-        g.drawImage(image, 0, 0, newWidth, newHeight, null)
-        g.dispose()
-
-        return Bitmap(scaledImage, filter)
-    }
-}
-
 // Внутренний класс для холста
 class GraphicsCanvas(width: Int, height: Int) : JPanel() {
     private val images = mutableMapOf<String, BufferedImage>()
     private val textElements = mutableMapOf<Int, TextElement>()
     private val imageElements = mutableMapOf<Int, ImageElement>()
-    private val bitmapElements = mutableMapOf<Int, BitmapElement>()
     private val animations = mutableMapOf<Int, Animation>()
     private val rectElements = mutableMapOf<Int, RectElement>()
     private var nextId = 0
@@ -279,19 +228,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
             }
         }
 
-        // Отрисовка bitmap'ов
-        for (element in bitmapElements.values) {
-            applyRenderingHints(g2d, element.bitmap.filter)
-
-            val transform = AffineTransform()
-            transform.translate(element.x.toDouble(), element.y.toDouble())
-            transform.rotate(Math.toRadians(element.rotation),
-                element.bitmap.width * element.scaleX / 2,
-                element.bitmap.height * element.scaleY / 2)
-            transform.scale(element.scaleX, element.scaleY)
-
-            g2d.drawImage(element.bitmap.image, transform, null)
-        }
 
         // Отрисовка анимаций
         for (rect in rectElements.values) {
@@ -301,20 +237,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
             } else {
                 g2d.drawRect(rect.x, rect.y, rect.width, rect.height)
             }
-        }
-
-
-        for (element in bitmapElements.values) {
-            applyRenderingHints(g2d, element.bitmap.filter)
-
-            val transform = AffineTransform()
-            transform.translate(element.x.toDouble(), element.y.toDouble())
-            transform.rotate(Math.toRadians(element.rotation),
-                element.bitmap.width * element.scaleX / 2,
-                element.bitmap.height * element.scaleY / 2)
-            transform.scale(element.scaleX, element.scaleY)
-
-            g2d.drawImage(element.bitmap.image, transform, null)
         }
 
         // Отрисовка текста
@@ -368,24 +290,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
         return id
     }
 
-
-    fun createBitmap(imagePath: String, filter: SimpleGraphics.ImageFilter): Bitmap {
-        val image = images[imagePath] ?: run {
-            val loadedImage = loadImage(imagePath)
-            images[imagePath] = loadedImage
-            loadedImage
-        }
-        return Bitmap(image, filter)
-    }
-
-    fun drawBitmap(bitmap: Bitmap, x: Int, y: Int,
-                   scaleX: Double, scaleY: Double,
-                   rotation: Double): Int {
-        val id = nextId++
-        bitmapElements[id] = BitmapElement(bitmap, x, y, scaleX, scaleY, rotation, id)
-        return id
-    }
-
     fun addAnimation(animation: Animation): Int {
         val id = nextId++
         animations[id] = animation
@@ -402,7 +306,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
         return when {
             textElements.containsKey(id) -> textElements.remove(id) != null
             imageElements.containsKey(id) -> imageElements.remove(id) != null
-            bitmapElements.containsKey(id) -> bitmapElements.remove(id) != null
             animations.containsKey(id) -> animations.remove(id) != null
             rectElements.containsKey(id) -> rectElements.remove(id) != null
             else -> false
@@ -419,11 +322,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
             imageElements.containsKey(id) -> {
                 val element = imageElements[id]!!
                 imageElements[id] = element.copy(x = x, y = y)
-                true
-            }
-            bitmapElements.containsKey(id) -> {
-                val element = bitmapElements[id]!!
-                bitmapElements[id] = element.copy(x = x, y = y)
                 true
             }
             animations.containsKey(id) -> {
@@ -446,11 +344,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
                 imageElements[id] = element.copy(scaleX = scaleX, scaleY = scaleY)
                 true
             }
-            bitmapElements.containsKey(id) -> {
-                val element = bitmapElements[id]!!
-                bitmapElements[id] = element.copy(scaleX = scaleX, scaleY = scaleY)
-                true
-            }
             animations.containsKey(id) -> {
                 animations[id]!!.setScale(scaleX, scaleY)
                 true
@@ -464,11 +357,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
             imageElements.containsKey(id) -> {
                 val element = imageElements[id]!!
                 imageElements[id] = element.copy(rotation = rotation)
-                true
-            }
-            bitmapElements.containsKey(id) -> {
-                val element = bitmapElements[id]!!
-                bitmapElements[id] = element.copy(rotation = rotation)
                 true
             }
             animations.containsKey(id) -> {
@@ -503,7 +391,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
         return when (type) {
             ElementType.TEXT -> textElements.keys.toList()
             ElementType.IMAGE -> imageElements.keys.toList()
-            ElementType.BITMAP -> bitmapElements.keys.toList()
             ElementType.ANIMATION -> animations.keys.toList()
             ElementType.RECT -> rectElements.keys.toList()
         }
@@ -519,10 +406,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
                 val element = imageElements[id]!!
                 ElementInfo(id, ElementType.IMAGE, element.x, element.y, element.scaleX, element.scaleY, element.rotation, element.path)
             }
-            bitmapElements.containsKey(id) -> {
-                val element = bitmapElements[id]!!
-                ElementInfo(id, ElementType.BITMAP, element.x, element.y, element.scaleX, element.scaleY, element.rotation)
-            }
             animations.containsKey(id) -> {
                 val animation = animations[id]!!
                 ElementInfo(id, ElementType.ANIMATION, animation.x, animation.y, animation.scaleX, animation.scaleY, animation.rotation)
@@ -534,7 +417,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
     fun clearAllElements() {
         textElements.clear()
         imageElements.clear()
-        bitmapElements.clear()
         animations.clear()
     }
 
@@ -558,10 +440,6 @@ data class ImageElement(val path: String, val x: Int, val y: Int,
                         val filter: SimpleGraphics.ImageFilter,
                         val scaleX: Double, val scaleY: Double,
                         val rotation: Double, val id: Int)
-
-data class BitmapElement(val bitmap: Bitmap, val x: Int, val y: Int,
-                         val scaleX: Double, val scaleY: Double,
-                         val rotation: Double, val id: Int)
 
 data class RectElement(val x: Int, val y: Int,
                        val width: Int, val height: Int,

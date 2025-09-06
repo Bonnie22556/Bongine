@@ -43,11 +43,13 @@ class Engine {
             val currentTime = System.nanoTime()
             val deltaTime = (currentTime - lastUpdateTime) / 1_000_000_000.0
             lastUpdateTime = currentTime
-            Input.update()
+
             updateCallback(deltaTime)
             update()
+            Input.update()
+
             try {
-                Thread.sleep(2) // Короткая пауза вместо 16ms
+                Thread.sleep(2)
             } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
             }
