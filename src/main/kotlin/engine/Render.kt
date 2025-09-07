@@ -67,8 +67,8 @@ class SimpleGraphics {
     }
 
     fun drawRect(x: Int, y: Int, width: Int, height: Int,
-                 color: Color = Color.BLACK, isFilled: Boolean = false): Int {
-        return canvas?.drawRect(x, y, width, height, color, isFilled) ?: -1
+                 outlineColor: Color = Color.BLACK, isFilled: Boolean = false, fillColor: Color = outlineColor, strokeWidth: Float = 1F): Int {
+        return canvas?.drawRect(x, y, width, height, outlineColor, isFilled, fillColor, strokeWidth) ?: -1
     }
 
     // Добавление анимации
@@ -231,13 +231,23 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
 
         // Отрисовка анимаций
         for (rect in rectElements.values) {
-            g2d.color = rect.color
+            val originalStroke = g2d.stroke
+            g2d.stroke = BasicStroke(rect.strokeWidth)
+
             if (rect.isFilled) {
+                g2d.color = rect.fillColor
                 g2d.fillRect(rect.x, rect.y, rect.width, rect.height)
-            } else {
+                g2d.color = rect.outlineColor
                 g2d.drawRect(rect.x, rect.y, rect.width, rect.height)
             }
+            else {
+                g2d.color = rect.outlineColor
+                g2d.drawRect(rect.x, rect.y, rect.width, rect.height)
+            }
+
+            g2d.stroke = originalStroke
         }
+
 
         // Отрисовка текста
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
@@ -284,9 +294,10 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
     }
 
     fun drawRect(x: Int, y: Int, width: Int, height: Int,
-                 color: Color = Color.BLACK, isFilled: Boolean = false): Int {
+                 outlineColor: Color = Color.BLACK, isFilled: Boolean = false,
+                 fillColor: Color = outlineColor, strokeWidth: Float = 1f): Int {
         val id = nextId++
-        rectElements[id] = RectElement(x, y, width, height, color, isFilled, id)
+        rectElements[id] = RectElement(x, y, width, height, outlineColor, isFilled, fillColor, strokeWidth, id)
         return id
     }
 
@@ -442,5 +453,7 @@ data class ImageElement(val path: String, val x: Int, val y: Int,
                         val rotation: Double, val id: Int)
 
 data class RectElement(val x: Int, val y: Int,
-                       val width: Int, val height: Int,
-                       val color: Color, val isFilled: Boolean, val id: Int)
+                            val width: Int, val height: Int,
+                            val outlineColor: Color, val isFilled: Boolean,
+                            val fillColor: Color, val strokeWidth: Float, // ← Добавить
+                            val id: Int)
