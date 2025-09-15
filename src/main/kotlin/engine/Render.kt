@@ -6,6 +6,8 @@ import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 import javax.swing.*
+import java.awt.Point
+import java.awt.geom.Point2D
 
 // Главный класс библиотеки
 class SimpleGraphics {
@@ -71,11 +73,6 @@ class SimpleGraphics {
         return canvas?.drawRect(x, y, width, height, outlineColor, isFilled, fillColor, strokeWidth) ?: -1
     }
 
-    // Добавление анимации
-    fun addAnimation(animation: Animation): Int {
-        return canvas?.addAnimation(animation) ?: -1
-    }
-
     // Удаление элемента по ID
     fun removeElement(id: Int): Boolean {
         return canvas?.removeElement(id) == true
@@ -84,6 +81,10 @@ class SimpleGraphics {
     // Обновление позиции элемента
     fun updateElementPosition(id: Int, x: Int, y: Int): Boolean {
         return canvas?.updateElementPosition(id, x, y) == true
+    }
+
+    fun setCamera(camera: Camera) {
+        canvas?.camera = camera
     }
 
     // Обновление масштаба элемента
@@ -140,7 +141,7 @@ class SimpleGraphics {
 
 // Типы элементов
 enum class ElementType {
-    TEXT, IMAGE, ANIMATION, RECT
+    TEXT, IMAGE, RECT
 }
 
 // Информация об элементе
@@ -154,50 +155,13 @@ data class ElementInfo(
     val rotation: Double,
     val path: String? = null
 )
-
-// Класс для работы с анимациями
-class Animation(val frames: List<String>, var frameDelay: Int = 100) {
-    private var currentFrame = 0
-    private var lastUpdateTime = System.currentTimeMillis()
-    var x: Int = 0
-    var y: Int = 0
-    var filter: SimpleGraphics.ImageFilter = SimpleGraphics.ImageFilter.NONE
-    var scaleX: Double = 1.0
-    var scaleY: Double = 1.0
-    var rotation: Double = 0.0
-        private set
-
-    fun update(): String {
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastUpdateTime > frameDelay) {
-            currentFrame = (currentFrame + 1) % frames.size
-            lastUpdateTime = currentTime
-        }
-        return frames[currentFrame]
-    }
-
-    fun setPosition(x: Int, y: Int) {
-        this.x = x
-        this.y = y
-    }
-
-    fun setScale(scaleX: Double, scaleY: Double) {
-        this.scaleX = scaleX
-        this.scaleY = scaleY
-    }
-
-    fun setRotation(angle: Double) {
-        this.rotation = angle
-    }
-}
-
 // Внутренний класс для холста
 class GraphicsCanvas(width: Int, height: Int) : JPanel() {
     private val images = mutableMapOf<String, BufferedImage>()
     private val textElements = mutableMapOf<Int, TextElement>()
     private val imageElements = mutableMapOf<Int, ImageElement>()
-    private val animations = mutableMapOf<Int, Animation>()
     private val rectElements = mutableMapOf<Int, RectElement>()
+    var camera: Camera? = null
     private var nextId = 0
     var clearColor: Color = Color.WHITE
 
@@ -212,6 +176,11 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
         // Очистка экрана
         g2d.color = clearColor
         g2d.fillRect(0, 0, width, height)
+
+        camera?.let {
+            g2d.translate((-it.x * it.zoom).toDouble(), (-it.y * it.zoom).toDouble())
+            g2d.scale(it.zoom.toDouble(), it.zoom.toDouble())
+        }
 
         // Отрисовка изображений
         for (element in imageElements.values) {
@@ -301,23 +270,10 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
         return id
     }
 
-    fun addAnimation(animation: Animation): Int {
-        val id = nextId++
-        animations[id] = animation
-        // Предзагрузка кадров анимации
-        for (frame in animation.frames) {
-            if (!images.containsKey(frame)) {
-                images[frame] = loadImage(frame)
-            }
-        }
-        return id
-    }
-
     fun removeElement(id: Int): Boolean {
         return when {
             textElements.containsKey(id) -> textElements.remove(id) != null
             imageElements.containsKey(id) -> imageElements.remove(id) != null
-            animations.containsKey(id) -> animations.remove(id) != null
             rectElements.containsKey(id) -> rectElements.remove(id) != null
             else -> false
         }
@@ -333,10 +289,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
             imageElements.containsKey(id) -> {
                 val element = imageElements[id]!!
                 imageElements[id] = element.copy(x = x, y = y)
-                true
-            }
-            animations.containsKey(id) -> {
-                animations[id]!!.setPosition(x, y)
                 true
             }
             rectElements.containsKey(id) -> {
@@ -355,10 +307,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
                 imageElements[id] = element.copy(scaleX = scaleX, scaleY = scaleY)
                 true
             }
-            animations.containsKey(id) -> {
-                animations[id]!!.setScale(scaleX, scaleY)
-                true
-            }
             else -> false
         }
     }
@@ -368,10 +316,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
             imageElements.containsKey(id) -> {
                 val element = imageElements[id]!!
                 imageElements[id] = element.copy(rotation = rotation)
-                true
-            }
-            animations.containsKey(id) -> {
-                animations[id]!!.setRotation(rotation)
                 true
             }
             else -> false
@@ -402,7 +346,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
         return when (type) {
             ElementType.TEXT -> textElements.keys.toList()
             ElementType.IMAGE -> imageElements.keys.toList()
-            ElementType.ANIMATION -> animations.keys.toList()
             ElementType.RECT -> rectElements.keys.toList()
         }
     }
@@ -417,10 +360,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
                 val element = imageElements[id]!!
                 ElementInfo(id, ElementType.IMAGE, element.x, element.y, element.scaleX, element.scaleY, element.rotation, element.path)
             }
-            animations.containsKey(id) -> {
-                val animation = animations[id]!!
-                ElementInfo(id, ElementType.ANIMATION, animation.x, animation.y, animation.scaleX, animation.scaleY, animation.rotation)
-            }
             else -> null
         }
     }
@@ -428,7 +367,6 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
     fun clearAllElements() {
         textElements.clear()
         imageElements.clear()
-        animations.clear()
     }
 
     private fun loadImage(path: String): BufferedImage {
@@ -441,6 +379,53 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
         }
     }
 }
+
+class Camera {
+    var x: Float = 0f
+    var y: Float = 0f
+    var zoom: Float = 1f
+    var camTarget: Object? = null
+    var cameraSmoothness = 5.0f
+    var cameraBounds: RectHitbox? = null
+    var IsTargetinCenter: Boolean? = null
+    var IsCameraSmooth: Boolean? = null
+
+    fun setCameraTarget(obj: Object) {
+        camTarget = obj
+    }
+    fun setCameraBounds(x: Int, y: Int, width: Int, height: Int) {
+        cameraBounds = RectHitbox(x, y, width, height)
+    }
+    fun setCameraPosition(x: Float, y: Float) {
+        this.x = x
+        this.y = y
+    }
+
+    fun worldToScreen(worldX: Float, worldY: Float): Point {
+        return Point(
+            ((worldX - x) * zoom).toInt(),
+            ((worldY - y) * zoom).toInt()
+        )
+    }
+
+    fun screenToWorld(screenX: Int, screenY: Int): Point2D.Float {
+        return Point2D.Float(
+            screenX / zoom + x,
+            screenY / zoom + y
+        )
+    }
+
+    fun changeZoom(newZoom: Float, centerX: Int, centerY: Int) {
+        val worldPosBefore = screenToWorld(centerX, centerY)
+        zoom = newZoom
+        val worldPosAfter = screenToWorld(centerX, centerY)
+
+        x += (worldPosBefore.x - worldPosAfter.x)
+        y += (worldPosBefore.y - worldPosAfter.y)
+    }
+}
+
+class Animation() { /* TODO("Сделать потом да, SpriteSheet нормальный, а не это уроство") */ }
 
 // Вспомогательные классы для хранения элементов отрисовки
 data class TextElement(val text: String, val x: Int, val y: Int,

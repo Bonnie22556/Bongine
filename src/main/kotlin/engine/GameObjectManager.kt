@@ -17,6 +17,18 @@ class Object(val elementId: Int, var hitbox: Hitbox) {
             else -> 0
         }
 
+    val width: Int
+        get() = when (hitbox) {
+            is RectHitbox -> (hitbox as RectHitbox).width
+            else -> 0
+        }
+
+    val height: Int
+        get() = when (hitbox) {
+            is RectHitbox -> (hitbox as RectHitbox).height
+            else -> 0
+        }
+
     // Проверяет, содержит ли хитбокс точку
     fun containsPoint(x: Int, y: Int): Boolean {
         return hitbox.contains(x, y)
