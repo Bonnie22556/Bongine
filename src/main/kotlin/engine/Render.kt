@@ -385,7 +385,7 @@ class Camera {
     var y: Float = 0f
     var zoom: Float = 1f
     var camTarget: Object? = null
-    var cameraSmoothness = 5.0f
+    var cameraSmoothness = 0.0f
     var cameraBounds: RectHitbox? = null
     var IsTargetinCenter: Boolean? = null
     var IsCameraSmooth: Boolean? = null

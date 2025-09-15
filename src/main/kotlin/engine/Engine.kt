@@ -56,26 +56,40 @@ class Engine {
     }
 
     private fun updateCamera(deltaTime: Double) {
+        val smoothFactor = 1.0f / Camera.cameraSmoothness
         if (Camera.IsTargetinCenter == true) {
             Camera.camTarget?.let { target ->
                 // Центрируем камеру на игроке (центр игрока минус половина экрана)
                 val targetX = target.x + target.width / 2 - Graphics.getCanvasComponent().width / (2 * Camera.zoom)
                 val targetY = target.y + target.height / 2 - Graphics.getCanvasComponent().height / (2 * Camera.zoom)
 
-                // Плавное движение камеры
-                Camera.x += ((targetX - Camera.x) * Camera.cameraSmoothness * deltaTime).toFloat()
-                Camera.y += ((targetY - Camera.y) * Camera.cameraSmoothness * deltaTime).toFloat()
+                if (Camera.IsCameraSmooth == true) {
+                    // Плавное движение камеры
+                    Camera.x += ((targetX - Camera.x) * smoothFactor * deltaTime).toFloat()
+                    Camera.y += ((targetY - Camera.y) * smoothFactor * deltaTime).toFloat()
+                }
+                else {
+                    // Резкое движение камеры (без плавности)
+                    Camera.x = targetX.toFloat()
+                    Camera.y = targetY.toFloat()
+                }
             }
-
         }
         else {
             Camera.camTarget?.let { target ->
                 val targetX = target.x + target.width / 2
                 val targetY = target.y + target.height / 2
 
-                // Плавное движение камеры
-                Camera.x += ((targetX - Camera.x) * Camera.cameraSmoothness * deltaTime).toFloat()
-                Camera.y += ((targetY - Camera.y) * Camera.cameraSmoothness * deltaTime).toFloat()
+                if (Camera.IsCameraSmooth == true) {
+                    // Плавное движение камеры
+                    Camera.x += ((targetX - Camera.x) * smoothFactor * deltaTime).toFloat()
+                    Camera.y += ((targetY - Camera.y) * smoothFactor * deltaTime).toFloat()
+                }
+                else {
+                    // Резкое движение камеры (без плавности)
+                    Camera.x = targetX.toFloat()
+                    Camera.y = targetY.toFloat()
+                }
             }
         }
         // Ограничение камеры границами
