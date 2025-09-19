@@ -5,6 +5,8 @@ class Engine {
     val Input = Input()
     val Audio = AudioEngine()
     val Camera = Camera()
+    val Timer = Timer()
+    // val Particles = ParticleSystem(Graphics)
     private var isRunning = false
     private var lastUpdateTime = System.nanoTime()
     internal val gameObjectManager = GameObjectManager()
@@ -45,6 +47,7 @@ class Engine {
 
             gameObjectManager.removeMarkedObjects()
             updateCamera(deltaTime)
+            // Particles.update(deltaTime)
             Graphics.update()
             Input.update()
 

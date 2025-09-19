@@ -13,6 +13,10 @@ class Input {
     private val prevKeysPressed = BooleanArray(256)
     private val prevMouseButtons = BooleanArray(5)
 
+    // зажатие кнопки
+    private val keyHoldTime = mutableMapOf<Int, Double>()
+    private val mouseButtonTime = mutableMapOf<Int, Double>()
+
     // Позиция мыши
     var mouseX = 0
     var mouseY = 0
@@ -81,6 +85,24 @@ class Input {
             System.arraycopy(mouseButtons, 0, prevMouseButtons, 0, mouseButtons.size)
     }
 
+    fun updateHoldTimes(deltaTime: Double) {
+        keysPressed.indices.forEach { keyCode ->
+            if (keysPressed[keyCode]) {
+                keyHoldTime[keyCode] = (keyHoldTime[keyCode] ?: 0.0) + deltaTime
+            } else {
+                keyHoldTime.remove(keyCode)
+            }
+        }
+
+        mouseButtons.indices.forEach { button ->
+            if (mouseButtons[button]) {
+                mouseButtonTime[button] = (mouseButtonTime[button] ?: 0.0) + deltaTime
+            } else {
+                mouseButtonTime.remove(button)
+            }
+        }
+    }
+
     // Функции для проверки состояния ввода
     fun isKeyPressed(keyCode: Int): Boolean {
         return keyCode < keysPressed.size && keysPressed[keyCode]
@@ -104,5 +126,13 @@ class Input {
 
     fun isMouseButtonJustReleased(button: Int): Boolean {
             return button in mouseButtons.indices && !mouseButtons[button] && prevMouseButtons[button]
+    }
+
+    fun getKeyHoldTime(keyCode: Int): Double {
+        return keyHoldTime[keyCode] ?: 0.0
+    }
+
+    fun getMouseButtonHoldTime(keyCode: Int): Double {
+        return mouseButtonTime[keyCode] ?: 0.0
     }
 }
