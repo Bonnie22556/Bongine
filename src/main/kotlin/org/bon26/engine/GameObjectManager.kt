@@ -3,6 +3,7 @@ package org.bon26.engine
 class Object(val elementId: Int, var hitbox: Hitbox) {
     var tag: String = ""
     var isEnabled: Boolean = true
+    var isMarkedForDeletion = false
 
     // Получение координат из хитбокса
     val x: Int
@@ -63,13 +64,23 @@ class RectHitbox(var x: Int, var y: Int, val width: Int, val height: Int) : Hitb
 
 
 class GameObjectManager {
-    private val gameObjects = mutableMapOf<Int, Object>()
+    val gameObjects = mutableMapOf<Int, Object>()
 
     fun addGameObject(elementId: Int, hitbox: Hitbox, tag: String = ""): Object {
         val obj = Object(elementId, hitbox)
         obj.tag = tag
         gameObjects[elementId] = obj
         return obj
+    }
+
+    fun removeMarkedObjects() {
+        val iterator = gameObjects.iterator()
+        while (iterator.hasNext()) {
+            val (elementId, obj) = iterator.next()
+            if (obj.isMarkedForDeletion) {
+                iterator.remove()
+            }
+        }
     }
 
     fun removeGameObject(elementId: Int) {
@@ -82,6 +93,10 @@ class GameObjectManager {
 
     fun getObjectAtPoint(x: Int, y: Int): Object? {
         return gameObjects.values.firstOrNull { it.isEnabled && it.containsPoint(x, y) }
+    }
+
+    fun getObjects(): Map<Int, Object>? {
+        return gameObjects
     }
 
     fun getIntersections(elementId: Int): List<Object> {

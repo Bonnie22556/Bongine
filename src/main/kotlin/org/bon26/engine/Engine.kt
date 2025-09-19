@@ -43,6 +43,7 @@ class Engine {
 
             updateCallback(deltaTime)
 
+            gameObjectManager.removeMarkedObjects()
             updateCamera(deltaTime)
             Graphics.update()
             Input.update()
@@ -55,21 +56,30 @@ class Engine {
         }
     }
 
+    fun removeMarkedObjects() {
+        val objectsToRemove = gameObjectManager.gameObjects.filter { it.value.isMarkedForDeletion }
+
+        objectsToRemove.forEach { obj ->
+            Graphics.removeElement(obj.value.elementId)
+            gameObjectManager.removeGameObject(obj.value.elementId)
+        }
+    }
+
     private fun updateCamera(deltaTime: Double) {
         val smoothFactor = 1.0f / Camera.cameraSmoothness
-        if (Camera.IsTargetinCenter == true) {
+        if (Camera.isTargetinCenter == true) {
             Camera.camTarget?.let { target ->
                 // Центрируем камеру на игроке (центр игрока минус половина экрана)
                 val targetX = target.x + target.width / 2 - Graphics.getCanvasComponent().width / (2 * Camera.zoom)
                 val targetY = target.y + target.height / 2 - Graphics.getCanvasComponent().height / (2 * Camera.zoom)
 
-                if (Camera.IsCameraSmooth == true) {
+                if (Camera.isCameraSmooth == true) {
                     // Плавное движение камеры
                     Camera.x += ((targetX - Camera.x) * smoothFactor * deltaTime).toFloat()
                     Camera.y += ((targetY - Camera.y) * smoothFactor * deltaTime).toFloat()
                 }
                 else {
-                    // Резкое движение камеры (без плавности)
+                    // Резкое движение камеры
                     Camera.x = targetX.toFloat()
                     Camera.y = targetY.toFloat()
                 }
@@ -80,13 +90,13 @@ class Engine {
                 val targetX = target.x + target.width / 2
                 val targetY = target.y + target.height / 2
 
-                if (Camera.IsCameraSmooth == true) {
+                if (Camera.isCameraSmooth == true) {
                     // Плавное движение камеры
                     Camera.x += ((targetX - Camera.x) * smoothFactor * deltaTime).toFloat()
                     Camera.y += ((targetY - Camera.y) * smoothFactor * deltaTime).toFloat()
                 }
                 else {
-                    // Резкое движение камеры (без плавности)
+                    // Резкое движение камеры
                     Camera.x = targetX.toFloat()
                     Camera.y = targetY.toFloat()
                 }
@@ -108,6 +118,4 @@ class Engine {
             )
         }
     }
-
-
 }

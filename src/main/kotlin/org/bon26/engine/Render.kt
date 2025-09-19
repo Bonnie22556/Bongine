@@ -56,21 +56,25 @@ class SimpleGraphics {
                      fontName: String = "Arial",
                      fontSize: Int = 12,
                      color: Color = Color.BLACK,
-                     style: Int = Font.PLAIN): Int {
-        return canvas?.drawRichText(text, x, y, fontName, fontSize, color, style) ?: -1
+                     style: Int = Font.PLAIN,
+                     zIndex: Int = 0): Int {
+        return canvas?.drawRichText(text, x, y, fontName, fontSize, color, style, zIndex) ?: -1
     }
 
     // Загрузка и отрисовка PNG изображения
     fun drawImage(imagePath: String, x: Int, y: Int,
                   filter: ImageFilter = ImageFilter.NONE,
                   scaleX: Double = 1.0, scaleY: Double = 1.0,
-                  rotation: Double = 0.0): Int {
-        return canvas?.drawImage(imagePath, x, y, filter, scaleX, scaleY, rotation) ?: -1
+                  rotation: Double = 0.0,
+                  zIndex: Int = 0): Int {
+        return canvas?.drawImage(imagePath, x, y, filter, scaleX, scaleY, rotation, zIndex) ?: -1
     }
 
     fun drawRect(x: Int, y: Int, width: Int, height: Int,
-                 outlineColor: Color = Color.BLACK, isFilled: Boolean = false, fillColor: Color = outlineColor, strokeWidth: Float = 1F): Int {
-        return canvas?.drawRect(x, y, width, height, outlineColor, isFilled, fillColor, strokeWidth) ?: -1
+                 outlineColor: Color = Color.BLACK, isFilled: Boolean = false,
+                 fillColor: Color = outlineColor, strokeWidth: Float = 1F,
+                 zIndex: Int = 0): Int {
+        return canvas?.drawRect(x, y, width, height, outlineColor, isFilled, fillColor, strokeWidth, zIndex) ?: -1
     }
 
     // Удаление элемента по ID
@@ -81,6 +85,11 @@ class SimpleGraphics {
     // Обновление позиции элемента
     fun updateElementPosition(id: Int, x: Int, y: Int): Boolean {
         return canvas?.updateElementPosition(id, x, y) == true
+    }
+
+    // Обновление Z-индекса элемента
+    fun updateElementZIndex(id: Int, zIndex: Int): Boolean {
+        return canvas?.updateElementZIndex(id, zIndex) == true
     }
 
     fun setCamera(camera: Camera) {
@@ -100,8 +109,8 @@ class SimpleGraphics {
     // Полное обновление элемента
     fun updateElement(id: Int, x: Int? = null, y: Int? = null,
                       scaleX: Double? = null, scaleY: Double? = null,
-                      rotation: Double? = null): Boolean {
-        return canvas?.updateElement(id, x, y, scaleX, scaleY, rotation) == true
+                      rotation: Double? = null, zIndex: Int? = null): Boolean {
+        return canvas?.updateElement(id, x, y, scaleX, scaleY, rotation, zIndex) == true
     }
 
     // Получение всех ID элементов определенного типа
@@ -112,6 +121,11 @@ class SimpleGraphics {
     // Получение информации об элементе
     fun getElementInfo(id: Int): ElementInfo? {
         return canvas?.getElementInfo(id)
+    }
+
+    // Получение Z-индекса элемента
+    fun getElementZIndex(id: Int): Int? {
+        return canvas?.getElementZIndex(id)
     }
 
     // Обновление экрана
@@ -153,11 +167,17 @@ data class ElementInfo(
     val scaleX: Double,
     val scaleY: Double,
     val rotation: Double,
+    val zIndex: Int,
     val path: String? = null
 )
+
+// Базовый класс для элементов с Z-индексом
+abstract class DrawableElement(val id: Int, var x: Int, var y: Int, var zIndex: Int)
+
 // Внутренний класс для холста
 class GraphicsCanvas(width: Int, height: Int) : JPanel() {
     private val images = mutableMapOf<String, BufferedImage>()
+    private val allElements = mutableMapOf<Int, DrawableElement>()
     private val textElements = mutableMapOf<Int, TextElement>()
     private val imageElements = mutableMapOf<Int, ImageElement>()
     private val rectElements = mutableMapOf<Int, RectElement>()
@@ -182,49 +202,55 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
             g2d.scale(it.zoom.toDouble(), it.zoom.toDouble())
         }
 
-        // Отрисовка изображений
-        for (element in imageElements.values) {
-            val image = images[element.path]
-            if (image != null) {
-                applyRenderingHints(g2d, element.filter)
+        // Сортировка элементов по Z-индексу
+        val sortedElements = allElements.values.sortedBy { it.zIndex }
 
-                val transform = AffineTransform()
-                transform.translate(element.x.toDouble(), element.y.toDouble())
-                transform.rotate(Math.toRadians(element.rotation), image.width * element.scaleX / 2, image.height * element.scaleY / 2)
-                transform.scale(element.scaleX, element.scaleY)
-
-                g2d.drawImage(image, transform, null)
+        // Отрисовка элементов в порядке Z-индекса
+        for (element in sortedElements) {
+            when (element) {
+                is ImageElement -> drawImageElement(g2d, element)
+                is RectElement -> drawRectElement(g2d, element)
+                is TextElement -> drawTextElement(g2d, element)
             }
         }
+    }
 
+    private fun drawImageElement(g2d: Graphics2D, element: ImageElement) {
+        val image = images[element.path]
+        if (image != null) {
+            applyRenderingHints(g2d, element.filter)
 
-        // Отрисовка анимаций
-        for (rect in rectElements.values) {
-            val originalStroke = g2d.stroke
-            g2d.stroke = BasicStroke(rect.strokeWidth)
+            val transform = AffineTransform()
+            transform.translate(element.x.toDouble(), element.y.toDouble())
+            transform.rotate(Math.toRadians(element.rotation), image.width * element.scaleX / 2, image.height * element.scaleY / 2)
+            transform.scale(element.scaleX, element.scaleY)
 
-            if (rect.isFilled) {
-                g2d.color = rect.fillColor
-                g2d.fillRect(rect.x, rect.y, rect.width, rect.height)
-                g2d.color = rect.outlineColor
-                g2d.drawRect(rect.x, rect.y, rect.width, rect.height)
-            }
-            else {
-                g2d.color = rect.outlineColor
-                g2d.drawRect(rect.x, rect.y, rect.width, rect.height)
-            }
+            g2d.drawImage(image, transform, null)
+        }
+    }
 
-            g2d.stroke = originalStroke
+    private fun drawRectElement(g2d: Graphics2D, element: RectElement) {
+        val originalStroke = g2d.stroke
+        g2d.stroke = BasicStroke(element.strokeWidth)
+
+        if (element.isFilled) {
+            g2d.color = element.fillColor
+            g2d.fillRect(element.x, element.y, element.width, element.height)
+            g2d.color = element.outlineColor
+            g2d.drawRect(element.x, element.y, element.width, element.height)
+        } else {
+            g2d.color = element.outlineColor
+            g2d.drawRect(element.x, element.y, element.width, element.height)
         }
 
+        g2d.stroke = originalStroke
+    }
 
-        // Отрисовка текста
+    private fun drawTextElement(g2d: Graphics2D, element: TextElement) {
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-        for (element in textElements.values) {
-            g2d.color = element.color
-            g2d.font = Font(element.fontName, element.style, element.fontSize)
-            g2d.drawString(element.text, element.x, element.y)
-        }
+        g2d.color = element.color
+        g2d.font = Font(element.fontName, element.style, element.fontSize)
+        g2d.drawString(element.text, element.x, element.y)
     }
 
     private fun applyRenderingHints(g2d: Graphics2D, filter: SimpleGraphics.ImageFilter) {
@@ -242,93 +268,97 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
 
     fun drawRichText(text: String, x: Int, y: Int,
                      fontName: String, fontSize: Int,
-                     color: Color, style: Int): Int {
+                     color: Color, style: Int, zIndex: Int): Int {
         val id = nextId++
-        textElements[id] = TextElement(text, x, y, fontName, fontSize, color, style, id)
+        val element = TextElement(text, x, y, fontName, fontSize, color, style, zIndex, id)
+        textElements[id] = element
+        allElements[id] = element
         return id
     }
 
     fun drawImage(imagePath: String, x: Int, y: Int,
                   filter: SimpleGraphics.ImageFilter,
                   scaleX: Double, scaleY: Double,
-                  rotation: Double): Int {
+                  rotation: Double, zIndex: Int): Int {
         val image = images[imagePath] ?: run {
             val loadedImage = loadImage(imagePath)
             images[imagePath] = loadedImage
             loadedImage
         }
         val id = nextId++
-        imageElements[id] = ImageElement(imagePath, x, y, filter, scaleX, scaleY, rotation, id)
+        val element = ImageElement(imagePath, x, y, filter, scaleX, scaleY, rotation, zIndex, id)
+        imageElements[id] = element
+        allElements[id] = element
         return id
     }
 
     fun drawRect(x: Int, y: Int, width: Int, height: Int,
                  outlineColor: Color = Color.BLACK, isFilled: Boolean = false,
-                 fillColor: Color = outlineColor, strokeWidth: Float = 1f): Int {
+                 fillColor: Color = outlineColor, strokeWidth: Float = 1f, zIndex: Int): Int {
         val id = nextId++
-        rectElements[id] = RectElement(x, y, width, height, outlineColor, isFilled, fillColor, strokeWidth, id)
+        val element = RectElement(x, y, width, height, outlineColor, isFilled, fillColor, strokeWidth, zIndex, id)
+        rectElements[id] = element
+        allElements[id] = element
         return id
     }
 
     fun removeElement(id: Int): Boolean {
-        return when {
-            textElements.containsKey(id) -> textElements.remove(id) != null
-            imageElements.containsKey(id) -> imageElements.remove(id) != null
-            rectElements.containsKey(id) -> rectElements.remove(id) != null
-            else -> false
-        }
+        allElements.remove(id)
+        textElements.remove(id)
+        imageElements.remove(id)
+        rectElements.remove(id)
+        return true
     }
 
     fun updateElementPosition(id: Int, x: Int, y: Int): Boolean {
-        return when {
-            textElements.containsKey(id) -> {
-                val element = textElements[id]!!
-                textElements[id] = element.copy(x = x, y = y)
-                true
-            }
-            imageElements.containsKey(id) -> {
-                val element = imageElements[id]!!
-                imageElements[id] = element.copy(x = x, y = y)
-                true
-            }
-            rectElements.containsKey(id) -> {
-                val element = rectElements[id]!!
-                rectElements[id] = element.copy(x = x, y = y)
-                true
-            }
-            else -> false
+        val element = allElements[id]
+        if (element != null) {
+            element.x = x
+            element.y = y
+            return true
         }
+        return false
+    }
+
+    fun updateElementZIndex(id: Int, zIndex: Int): Boolean {
+        val element = allElements[id]
+        if (element != null) {
+            element.zIndex = zIndex
+            return true
+        }
+        return false
     }
 
     fun updateElementScale(id: Int, scaleX: Double, scaleY: Double): Boolean {
-        return when {
-            imageElements.containsKey(id) -> {
-                val element = imageElements[id]!!
-                imageElements[id] = element.copy(scaleX = scaleX, scaleY = scaleY)
-                true
-            }
-            else -> false
+        val element = imageElements[id]
+        if (element != null) {
+            element.scaleX = scaleX
+            element.scaleY = scaleY
+            return true
         }
+        return false
     }
 
     fun updateElementRotation(id: Int, rotation: Double): Boolean {
-        return when {
-            imageElements.containsKey(id) -> {
-                val element = imageElements[id]!!
-                imageElements[id] = element.copy(rotation = rotation)
-                true
-            }
-            else -> false
+        val element = imageElements[id]
+        if (element != null) {
+            element.rotation = rotation
+            return true
         }
+        return false
     }
 
     fun updateElement(id: Int, x: Int? = null, y: Int? = null,
                       scaleX: Double? = null, scaleY: Double? = null,
-                      rotation: Double? = null): Boolean {
+                      rotation: Double? = null, zIndex: Int? = null): Boolean {
         var updated = false
 
         if (x != null && y != null) {
             updated = updateElementPosition(id, x, y) || updated
+        }
+
+        if (zIndex != null) {
+            updated = updateElementZIndex(id, zIndex) || updated
         }
 
         if (scaleX != null && scaleY != null) {
@@ -354,19 +384,29 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
         return when {
             textElements.containsKey(id) -> {
                 val element = textElements[id]!!
-                ElementInfo(id, ElementType.TEXT, element.x, element.y, 1.0, 1.0, 0.0)
+                ElementInfo(id, ElementType.TEXT, element.x, element.y, 1.0, 1.0, 0.0, element.zIndex)
             }
             imageElements.containsKey(id) -> {
                 val element = imageElements[id]!!
-                ElementInfo(id, ElementType.IMAGE, element.x, element.y, element.scaleX, element.scaleY, element.rotation, element.path)
+                ElementInfo(id, ElementType.IMAGE, element.x, element.y, element.scaleX, element.scaleY, element.rotation, element.zIndex, element.path)
+            }
+            rectElements.containsKey(id) -> {
+                val element = rectElements[id]!!
+                ElementInfo(id, ElementType.RECT, element.x, element.y, 1.0, 1.0, 0.0, element.zIndex)
             }
             else -> null
         }
     }
 
+    fun getElementZIndex(id: Int): Int? {
+        return allElements[id]?.zIndex
+    }
+
     fun clearAllElements() {
+        allElements.clear()
         textElements.clear()
         imageElements.clear()
+        rectElements.clear()
     }
 
     private fun loadImage(path: String): BufferedImage {
@@ -387,8 +427,8 @@ class Camera {
     var camTarget: Object? = null
     var cameraSmoothness = 0.0f
     var cameraBounds: RectHitbox? = null
-    var IsTargetinCenter: Boolean? = null
-    var IsCameraSmooth: Boolean? = null
+    var isTargetinCenter: Boolean? = null
+    var isCameraSmooth: Boolean? = null
 
     fun setCameraTarget(obj: Object) {
         camTarget = obj
@@ -425,20 +465,39 @@ class Camera {
     }
 }
 
-class Animation() { /* TODO("Сделать потом да, SpriteSheet нормальный, а не это уроство") */ }
+class Animation() { fun placeholder() {TODO("когда-нибудь я верну анимации...")} }
 
 // Вспомогательные классы для хранения элементов отрисовки
-data class TextElement(val text: String, val x: Int, val y: Int,
-                       val fontName: String, val fontSize: Int,
-                       val color: Color, val style: Int, val id: Int)
+class TextElement(
+    val text: String,
+    x: Int, y: Int,
+    val fontName: String,
+    val fontSize: Int,
+    val color: Color,
+    val style: Int,
+    zIndex: Int,
+    id: Int
+) : DrawableElement(id, x, y, zIndex)
 
-data class ImageElement(val path: String, val x: Int, val y: Int,
-                        val filter: SimpleGraphics.ImageFilter,
-                        val scaleX: Double, val scaleY: Double,
-                        val rotation: Double, val id: Int)
+class ImageElement(
+    val path: String,
+    x: Int, y: Int,
+    val filter: SimpleGraphics.ImageFilter,
+    var scaleX: Double,
+    var scaleY: Double,
+    var rotation: Double,
+    zIndex: Int,
+    id: Int
+) : DrawableElement(id, x, y, zIndex)
 
-data class RectElement(val x: Int, val y: Int,
-                            val width: Int, val height: Int,
-                            val outlineColor: Color, val isFilled: Boolean,
-                            val fillColor: Color, val strokeWidth: Float, // ← Добавить
-                            val id: Int)
+class RectElement(
+    x: Int, y: Int,
+    val width: Int,
+    val height: Int,
+    val outlineColor: Color,
+    val isFilled: Boolean,
+    val fillColor: Color,
+    val strokeWidth: Float,
+    zIndex: Int,
+    id: Int
+) : DrawableElement(id, x, y, zIndex)

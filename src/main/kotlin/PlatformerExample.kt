@@ -1,5 +1,6 @@
-package org.bon26.engine
+package org.bon26.game
 
+import org.bon26.engine.*
 import java.awt.Color
 import java.awt.event.KeyEvent
 
@@ -50,8 +51,9 @@ fun main() {
     // Настройка камеры - КЛЮЧЕВЫЕ ИЗМЕНЕНИЯ
     engine.Camera.setCameraTarget(player)
     engine.Camera.zoom = 1.5f
-    engine.Camera.cameraSmoothness = 5.0f
-    engine.Camera.IsTargetinCenter = true
+    engine.Camera.cameraSmoothness = 0.25f
+    engine.Camera.isTargetinCenter = true
+    engine.Camera.isCameraSmooth = true
 
     // Установите границы камеры, учитывая размер экрана
     val screenWidth = 800
@@ -93,9 +95,9 @@ fun main() {
 
         // Проверяем коллизии
         isOnGround = false
-        val intersections = engine.getIntersections(playerId)
+        val intersectionsWithPlayer = engine.getIntersections(playerId)
 
-        for (obj in intersections) {
+        for (obj in intersectionsWithPlayer) {
             if (obj.tag == "platform") {
                 val platform = obj.hitbox as RectHitbox
                 val playerBottom = player.y + playerHeight
@@ -111,10 +113,8 @@ fun main() {
             }
         }
 
-        // Финальное обновление позиции
+        // Финальное обновление позиции + обновляем графическое представление
         engine.gameObjectManager.updateHitboxPosition(playerId, newX, newY)
-
-        // Обновляем графическое представление
         engine.Graphics.updateElementPosition(playerGraphicId, player.x, player.y)
 
         // Обновляем позиции платформ
@@ -122,12 +122,7 @@ fun main() {
             engine.Graphics.updateElementPosition(platformGraphicIds[index], hitbox.x, hitbox.y)
         }
 
-        // Отладочная информация
-        println("Player: (${player.x}, ${player.y})")
-        println("Camera: (${engine.Camera.x}, ${engine.Camera.y})")
-
         // Отрисовка
-        engine.Graphics.clear(Color.WHITE)
     }
 
     engine.cleanup()
