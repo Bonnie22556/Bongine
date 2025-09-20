@@ -1,13 +1,14 @@
 package org.bon26.game
 
 import org.bon26.engine.Engine
+import org.bon26.engine.MouseButton
 import org.bon26.engine.Noise
 import org.bon26.engine.NoiseType
 import org.bon26.engine.RectHitbox
+import org.bon26.engine.Key
 import java.awt.Color
 import java.awt.event.KeyEvent
 import kotlin.math.floor
-import javax.swing.SwingUtilities
 
 fun main() {
     val engine = Engine()
@@ -34,13 +35,13 @@ fun main() {
     engine.Camera.isCameraSmooth = true
 
     val noise = Noise(0, NoiseType.SIMPLEX)
-    val worldSizeX = 500
-    val worldSizeY = 500
+    val worldSizeX = 4096
+    val worldSizeY = 4096
     val scale = 0.01
 
     // Конфигурация чанков
     val chunkSize = 16
-    val renderDistance = 2
+    val renderDistance = 4
     val loadedChunks = mutableSetOf<Pair<Int, Int>>()
     val tileElements = mutableMapOf<Pair<Int, Int>, MutableList<Int>>()
 
@@ -80,16 +81,9 @@ fun main() {
     }
 
     fun unloadChunk(chunkX: Int, chunkY: Int) {
-        val chunkKey = Pair(chunkX, chunkY)
-        if (!loadedChunks.contains(chunkKey)) return
-
-        // Удаляем элементы в потоке EDT для безопасности
-        SwingUtilities.invokeLater {
-            tileElements[chunkKey]?.forEach { engine.Graphics.removeElement(it) }
-        }
-
-        tileElements.remove(chunkKey)
-        loadedChunks.remove(chunkKey)
+        tileElements[Pair(chunkX, chunkY)]?.forEach { engine.Graphics.removeElement(it) }
+        tileElements.remove(Pair(chunkX, chunkY))
+        loadedChunks.remove(Pair(chunkX, chunkY))
     }
 
     fun updateChunks() {
@@ -112,6 +106,7 @@ fun main() {
     // Первоначальная загрузка чанков
     updateChunks()
 
+
     engine.GameLoop { deltaTime ->
         val oldPosX = player.x
         val oldPosY = player.y
@@ -119,22 +114,13 @@ fun main() {
         var newPosY = oldPosY
 
         // Обработка ввода
-        if (engine.Input.isKeyPressed(KeyEvent.VK_LEFT)) newPosX -= 1
-        else if (engine.Input.isKeyPressed(KeyEvent.VK_RIGHT)) newPosX += 1
-        if (engine.Input.isKeyPressed(KeyEvent.VK_DOWN)) newPosY += 1
-        else if (engine.Input.isKeyPressed(KeyEvent.VK_UP)) newPosY -= 1
+        if (engine.Input.isKeyPressed(Key.LEFT)) newPosX -= 1
+        else if (engine.Input.isKeyPressed(Key.RIGHT)) newPosX += 1
+        if (engine.Input.isKeyPressed(Key.DOWN)) newPosY += 1
+        else if (engine.Input.isKeyPressed(Key.UP)) newPosY -= 1
 
-        // Изменение Z-индекса игрока (пример)
-        if (engine.Input.isKeyJustPressed(KeyEvent.VK_Z)) {
-            val currentZIndex = engine.Graphics.getElementZIndex(playerGraphicId) ?: 10
-            engine.Graphics.updateElementZIndex(playerGraphicId, currentZIndex + 1)
-        } else if (engine.Input.isKeyJustPressed(KeyEvent.VK_X)) {
-            val currentZIndex = engine.Graphics.getElementZIndex(playerGraphicId) ?: 10
-            engine.Graphics.updateElementZIndex(playerGraphicId, currentZIndex - 1)
-        }
-
-        if (engine.Input.isKeyJustPressed(KeyEvent.VK_PAGE_DOWN)) engine.Camera.zoom += 0.1f
-        else if (engine.Input.isKeyJustPressed(KeyEvent.VK_PAGE_UP)) engine.Camera.zoom -= 0.1f
+        if (engine.Input.isKeyJustPressed(Key.PAGE_DOWN)) engine.Camera.zoom += 0.1f
+        else if (engine.Input.isKeyJustPressed(Key.PAGE_UP)) engine.Camera.zoom -= 0.1f
 
         engine.gameObjectManager.updateHitboxPosition(playerId, newPosX, oldPosY)
         val intersectionsX = engine.getIntersections(playerId)
@@ -163,4 +149,5 @@ fun main() {
     }
 
     engine.cleanup()
+
 }

@@ -2,7 +2,6 @@ package org.bon26.game
 
 import org.bon26.engine.*
 import java.awt.Color
-import java.awt.event.KeyEvent
 
 fun main() {
     val engine = Engine()
@@ -61,21 +60,21 @@ fun main() {
     engine.Camera.setCameraBounds(
         -screenWidth/2,
         0,
-        1600 + screenWidth,
-        600
+        screenWidth*2 + screenWidth,
+        screenHeight
     )
 
     // Запускаем игровой цикл
     engine.GameLoop { deltaTime ->
         // Обработка ввода
         velocityX = 0.0
-        if (engine.Input.isKeyPressed(KeyEvent.VK_LEFT)) {
+        if (engine.Input.isKeyPressed(Key.LEFT)) {
             velocityX = -moveSpeed
-        } else if (engine.Input.isKeyPressed(KeyEvent.VK_RIGHT)) {
+        } else if (engine.Input.isKeyPressed(Key.RIGHT)) {
             velocityX = moveSpeed
         }
 
-        if (engine.Input.isKeyPressed(KeyEvent.VK_SPACE) && isOnGround) {
+        if (engine.Input.isKeyPressed(Key.SPACE) && isOnGround) {
             velocityY = jumpForce
             isOnGround = false
         }

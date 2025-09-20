@@ -23,9 +23,10 @@ class AudioClip private constructor(
                 val clip = AudioSystem.getClip()
                 clip.open(format, buffer, 0, buffer.size)
 
-                val gainControl = clip.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
-
-                AudioClip(clip, gainControl, buffer)
+                AudioClip(clip, format, buffer).apply {
+                    // Устанавливаем начальную громкость
+                    setVolume(1.0f)
+                }
             } catch (e: Exception) {
                 System.err.println("Error loading audio file: ${e.message}")
                 null

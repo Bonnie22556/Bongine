@@ -123,6 +123,11 @@ class SimpleGraphics {
         return canvas?.getElementInfo(id)
     }
 
+    // Обновление цвета объекту
+    fun updateElementColor(id: Int, color: Color): Boolean {
+        return canvas?.updateElementColor(id, color) == true
+    }
+
     // Получение Z-индекса элемента
     fun getElementZIndex(id: Int): Int? {
         return canvas?.getElementZIndex(id)
@@ -303,6 +308,10 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
     }
 
     fun removeElement(id: Int): Boolean {
+        if (!allElements.containsKey(id)) {
+            return false
+        }
+
         allElements.remove(id)
         textElements.remove(id)
         imageElements.remove(id)
@@ -370,6 +379,22 @@ class GraphicsCanvas(width: Int, height: Int) : JPanel() {
         }
 
         return updated
+    }
+
+    fun updateElementColor(id: Int, color: Color): Boolean {
+        when {
+            textElements.containsKey(id) -> {
+                textElements[id]!!.color = color
+                return true
+            }
+            rectElements.containsKey(id) -> {
+                val element = rectElements[id]!!
+                element.outlineColor = color
+                element.fillColor = color
+                return true
+            }
+            else -> return false
+        }
     }
 
     fun getElementIds(type: ElementType): List<Int> {
@@ -473,7 +498,7 @@ class TextElement(
     x: Int, y: Int,
     val fontName: String,
     val fontSize: Int,
-    val color: Color,
+    var color: Color,
     val style: Int,
     zIndex: Int,
     id: Int
@@ -494,9 +519,9 @@ class RectElement(
     x: Int, y: Int,
     val width: Int,
     val height: Int,
-    val outlineColor: Color,
+    var outlineColor: Color,
     val isFilled: Boolean,
-    val fillColor: Color,
+    var fillColor: Color,
     val strokeWidth: Float,
     zIndex: Int,
     id: Int
